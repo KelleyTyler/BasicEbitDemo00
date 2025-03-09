@@ -59,55 +59,27 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// var tempRect = image.Rect(0, 0, 32, 32)
-	// imgs = append(imgs, *RelativeCrop(temp, tempRect))
-	// tempRect = image.Rect(16, 0, 32, 32)
-	// imgs = append(imgs, *RelativeCrop(temp, tempRect))
-	// tempRect = image.Rect(32, 0, 32, 32)
-	// imgs = append(imgs, *RelativeCrop(temp, tempRect))
-	// tempRect = image.Rect(64, 0, 32, 32)
-	// imgs = append(imgs, *RelativeCrop(temp, tempRect))
 	imgs = GetArrayOfImages(temp, 32, 0, 32, 0, 16)
 }
 
 func GetArrayOfImages(source *ebiten.Image, subImageX int, xBuf int, subImageY int, yBuf int, numImages int) []ebiten.Image {
 	var temp []ebiten.Image
-	//var tempRect = image.Rect(0, 0, 32, 32)
 	a, b := 0, 0
 	for i := 0; i < numImages; i++ {
-
 		if (a * subImageX) >= source.Bounds().Max.X {
 			b++
 			a = 0
 		}
-
-		//t := (i * subImageX)
-		// tempRect := image.Rect(t, 0, 32, 32)
-		// // rx, ry := source.Bounds().Min.X+tempRect.Min.X, source.Bounds().Min.Y+tempRect.Min.Y
-		// fmt.Printf("%2d|%2d|MIN %2d,%2d|MAX %2d,%2d| R: %3d %3d ", i, 0+t, tempRect.Min.X, tempRect.Min.Y, tempRect.Max.X, tempRect.Max.Y, rx, ry)
-		fmt.Printf("| SBounds: MIN: %3d %3d MAX: %3d %3d", source.Bounds().Min.X, source.Bounds().Min.Y, source.Bounds().Max.X, source.Bounds().Max.Y)
-		//temp2 := RelativeCrop(source, tempRect)
-
-		//bounds := source.Bounds()
-		//width := bounds.Dx()
+		//fmt.Printf("| SBounds: MIN: %3d %3d MAX: %3d %3d", source.Bounds().Min.X, source.Bounds().Min.Y, source.Bounds().Max.X, source.Bounds().Max.Y)
 		cropsize := image.Rect(0, 0, subImageY, subImageY)
 		cropsize = cropsize.Add(image.Point{(subImageX * a) + xBuf, (subImageY * b) + yBuf})
-
 		temp2 := source.SubImage(cropsize)
 		temp3 := ebiten.NewImageFromImage(temp2)
-		// temp2 := source.SubImage(image.Rect(rx, ry, rx+tempRect.Max.X, ry+tempRect.Max.Y)).(*ebiten.Image)
-		//temp3.Fill(color.RGBA{uint8(15), uint8(60), uint8(25), uint8(100)})
-		fmt.Printf(" TEMP%d:Dx/Dy: %d %d MAX: %d,%d\n", i, temp2.Bounds().Dx(), temp2.Bounds().Dy(), temp2.Bounds().Max.X, temp2.Bounds().Max.Y)
+		//fmt.Printf(" TEMP%d:Dx/Dy: %d %d MAX: %d,%d\n", i, temp2.Bounds().Dx(), temp2.Bounds().Dy(), temp2.Bounds().Max.X, temp2.Bounds().Max.Y)
 		temp = append(temp, *temp3)
 		a++
 	}
 	return temp
-}
-
-/* thank you for this bit of advice 'sedyh' this was a step in the right direction though it had problems*/
-func RelativeCrop(source *ebiten.Image, r image.Rectangle) *ebiten.Image {
-	rx, ry := source.Bounds().Min.X+r.Min.X, source.Bounds().Min.Y+r.Min.Y
-	return source.SubImage(image.Rect(rx, ry, rx+r.Max.X, ry+r.Max.Y)).(*ebiten.Image)
 }
 
 type Sprite struct {
@@ -119,20 +91,8 @@ type Sprite struct {
 
 	angle         int //the angle of the image
 	imgArrCurrent int
-	imgArrDown    bool
 }
 
-// func spriteInit(fioPath string) *Sprite {
-// 	temp := Sprite{Simg: nil, pX: spriteX, pY: spriteY, vX: 0, vY: 0, imgHeight: 0, imgWidth: 0}
-// 	temp.Simg = img // going to want to make img an array in the future; or a map or something;
-// 	// so that way there's multiple codes;
-// 	return &temp
-// }
-
-// func (sprt *Sprite) Init(fIoPath string) error {
-
-//		return nil
-//	}
 /*Sprite.Move:
 *this will need a
  */
@@ -210,7 +170,7 @@ func (g *Game) init() error {
 func (g *Game) Update() error {
 	if !g.inited {
 		g.init()
-		fmt.Printf("INITIATED \n")
+		//fmt.Printf("INITIATED \n")
 	}
 	//game logic goes here;
 	//this might be the basic CPU-type logic only though... not sure;
@@ -227,12 +187,6 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		g.sprt.vY -= 1
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyA) && !g.sprt.imgArrDown {
-
-		//g.sprt.imgArrDown = true
-
-	}
-
 	if inpututil.IsKeyJustReleased(ebiten.KeyA) {
 		if g.sprt.imgArrCurrent < (len(g.sprt.Simg) - 1) {
 			g.sprt.imgArrCurrent += 1
@@ -259,12 +213,7 @@ func (g *Game) FPSChanger() {
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(whiteImage, nil)
 	g.FPSChanger()
-	//screen.DrawImage(img, nil)
-	// screen.DrawImage(g.sprt.Simg, &g.op)
 	g.sprt.Draw(screen, g)
-
-	//this might be graphic layout?? a means perhaps to control layers?
-	//ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS:%3.1f\nA:%3.1f\nFRAMES:%d", g.fRate, g.fRateAvg, g.frames))
 	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3d,%3d\n(vX,Vy):%3d,%3d\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.fRate, g.sprt.pX, g.sprt.pY, g.sprt.vX, g.sprt.vY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
 	ebitenutil.DebugPrint(screen, g.gMSG)
 }
@@ -274,12 +223,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
-	//initializing
-	// var g = Game{
-	// 	fRate:  0.0,
-	// 	lTime:  time.Now(),
-	// 	frames: 0,
-	// }
+
 	ebiten.SetWindowSize(defWindowWidth, defWindowHeight)
 	// presentTime := time.Now()
 	ebiten.SetWindowTitle("EBITEN TEST!")
