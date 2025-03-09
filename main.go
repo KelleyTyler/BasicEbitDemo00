@@ -47,7 +47,7 @@ var imgs []ebiten.Image
 var whiteImage = ebiten.NewImage(defScrnResX, defScrnResY)
 
 func init() {
-	whiteImage.Fill(color.RGBA{150, 90, 90, 255})
+	whiteImage.Fill(color.RGBA{200, 200, 200, 255})
 	var err error
 	img, _, err = ebitenutil.NewImageFromFile("assets/Square_32x32Texture.png")
 	if err != nil {
@@ -67,24 +67,31 @@ func init() {
 	// imgs = append(imgs, *RelativeCrop(temp, tempRect))
 	// tempRect = image.Rect(64, 0, 32, 32)
 	// imgs = append(imgs, *RelativeCrop(temp, tempRect))
-	imgs = GetArrayOfImages(temp, 32, 32, 7)
+	imgs = GetArrayOfImages(temp, 32, 0, 32, 0, 16)
 }
 
-func GetArrayOfImages(source *ebiten.Image, subImageX int, subImageY int, numImages int) []ebiten.Image {
+func GetArrayOfImages(source *ebiten.Image, subImageX int, xBuf int, subImageY int, yBuf int, numImages int) []ebiten.Image {
 	var temp []ebiten.Image
 	//var tempRect = image.Rect(0, 0, 32, 32)
+	a, b := 0, 0
 	for i := 0; i < numImages; i++ {
-		t := (i * subImageX)
-		tempRect := image.Rect(t, 0, 32, 32)
-		rx, ry := source.Bounds().Min.X+tempRect.Min.X, source.Bounds().Min.Y+tempRect.Min.Y
-		fmt.Printf("%2d|%2d|MIN %2d,%2d|MAX %2d,%2d| R: %3d %3d ", i, 0+t, tempRect.Min.X, tempRect.Min.Y, tempRect.Max.X, tempRect.Max.Y, rx, ry)
+
+		if (a * subImageX) >= source.Bounds().Max.X {
+			b++
+			a = 0
+		}
+
+		//t := (i * subImageX)
+		// tempRect := image.Rect(t, 0, 32, 32)
+		// // rx, ry := source.Bounds().Min.X+tempRect.Min.X, source.Bounds().Min.Y+tempRect.Min.Y
+		// fmt.Printf("%2d|%2d|MIN %2d,%2d|MAX %2d,%2d| R: %3d %3d ", i, 0+t, tempRect.Min.X, tempRect.Min.Y, tempRect.Max.X, tempRect.Max.Y, rx, ry)
 		fmt.Printf("| SBounds: MIN: %3d %3d MAX: %3d %3d", source.Bounds().Min.X, source.Bounds().Min.Y, source.Bounds().Max.X, source.Bounds().Max.Y)
 		//temp2 := RelativeCrop(source, tempRect)
 
 		//bounds := source.Bounds()
 		//width := bounds.Dx()
 		cropsize := image.Rect(0, 0, subImageY, subImageY)
-		cropsize = cropsize.Add(image.Point{(subImageX * i), 0})
+		cropsize = cropsize.Add(image.Point{(subImageX * a) + xBuf, (subImageY * b) + yBuf})
 
 		temp2 := source.SubImage(cropsize)
 		temp3 := ebiten.NewImageFromImage(temp2)
@@ -92,10 +99,12 @@ func GetArrayOfImages(source *ebiten.Image, subImageX int, subImageY int, numIma
 		//temp3.Fill(color.RGBA{uint8(15), uint8(60), uint8(25), uint8(100)})
 		fmt.Printf(" TEMP%d:Dx/Dy: %d %d MAX: %d,%d\n", i, temp2.Bounds().Dx(), temp2.Bounds().Dy(), temp2.Bounds().Max.X, temp2.Bounds().Max.Y)
 		temp = append(temp, *temp3)
+		a++
 	}
 	return temp
 }
 
+/* thank you for this bit of advice 'sedyh' this was a step in the right direction though it had problems*/
 func RelativeCrop(source *ebiten.Image, r image.Rectangle) *ebiten.Image {
 	rx, ry := source.Bounds().Min.X+r.Min.X, source.Bounds().Min.Y+r.Min.Y
 	return source.SubImage(image.Rect(rx, ry, rx+r.Max.X, ry+r.Max.Y)).(*ebiten.Image)
