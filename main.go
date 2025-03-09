@@ -43,7 +43,7 @@ const (
 var img *ebiten.Image
 
 var imgs []ebiten.Image
-
+var btnImgs []ebiten.Image
 var backgroundColor = ebiten.NewImage(defScrnResX, defScrnResY)
 
 func init() {
@@ -60,6 +60,11 @@ func init() {
 		log.Fatal(err)
 	}
 	imgs = GetArrayOfImages(temp, 32, 0, 32, 0, 16)
+	temp, _, err = ebitenutil.NewImageFromFile("assets/96x32Buttons.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	btnImgs = GetArrayOfImages(temp, 32, 0, 16, 0, 3)
 }
 
 func GetArrayOfImages(source *ebiten.Image, subImageX int, xBuf int, subImageY int, yBuf int, numImages int) []ebiten.Image {
@@ -71,7 +76,7 @@ func GetArrayOfImages(source *ebiten.Image, subImageX int, xBuf int, subImageY i
 			a = 0
 		}
 		//fmt.Printf("| SBounds: MIN: %3d %3d MAX: %3d %3d", source.Bounds().Min.X, source.Bounds().Min.Y, source.Bounds().Max.X, source.Bounds().Max.Y)
-		cropsize := image.Rect(0, 0, subImageY, subImageY)
+		cropsize := image.Rect(0, 0, subImageX, subImageY)
 		cropsize = cropsize.Add(image.Point{(subImageX * a) + xBuf, (subImageY * b) + yBuf})
 		temp2 := source.SubImage(cropsize)
 		temp3 := ebiten.NewImageFromImage(temp2)
@@ -80,6 +85,13 @@ func GetArrayOfImages(source *ebiten.Image, subImageX int, xBuf int, subImageY i
 		a++
 	}
 	return temp
+}
+
+type Button struct {
+	Simg            []ebiten.Image
+	buttonState     int
+	bX, bY          int
+	bHeight, bWidth int
 }
 
 type Sprite struct {
@@ -91,6 +103,14 @@ type Sprite struct {
 
 	angle         int //the angle of the image
 	imgArrCurrent int
+}
+
+func (btn *Button) isMouseOverPos() bool {
+	mX, mY := ebiten.CursorPosition()
+	if ((mX < btn.bX+btn.bWidth) && (mX > btn.bX)) && ((mY < btn.bY+btn.bHeight) && (mY > btn.bY)) {
+		return true
+	}
+	return false
 }
 
 /*Sprite.Move:
@@ -135,6 +155,16 @@ func (sprt *Sprite) Draw(screen *ebiten.Image, g *Game) {
 	g.op.GeoM.Reset()
 }
 
+func (btn *Button) Draw(screen *ebiten.Image, g *Game) {
+	w, h := btn.Simg[btn.buttonState].Bounds().Dx(), btn.Simg[btn.buttonState].Bounds().Dy()
+	g.op.GeoM.Reset()
+	g.op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
+	g.op.GeoM.Translate(float64(w)/2, float64(h)/2)
+	g.op.GeoM.Translate(float64(btn.bX), float64(btn.bY))
+	screen.DrawImage(&btn.Simg[btn.buttonState], &g.op)
+	g.op.GeoM.Reset()
+}
+
 type Game struct {
 	//game variables and other such things go here;
 	fRate  float64
@@ -145,6 +175,7 @@ type Game struct {
 	sprt Sprite
 	op   ebiten.DrawImageOptions
 	gMSG string
+	btn1 Button
 }
 
 func (g *Game) init() error {
@@ -165,6 +196,14 @@ func (g *Game) init() error {
 		//imgArrDown:    false,
 	}
 	//g.sprt.Simg = append(g.sprt.Simg, *img)
+	g.btn1 = Button{
+		Simg:        btnImgs,
+		bX:          defScrnResX - 36,
+		bY:          16,
+		bHeight:     16,
+		bWidth:      32,
+		buttonState: 0,
+	}
 	return nil
 }
 func (g *Game) Update() error {
@@ -196,6 +235,28 @@ func (g *Game) Update() error {
 		g.sprt.imgHeight = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.Y
 		g.sprt.imgWidth = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.X
 	}
+	// if inpututil.IsKeyJustReleased(ebiten.KeyD) {
+	// 	if g.btn1.buttonState < (len(g.btn1.Simg) - 1) {
+	// 		g.btn1.buttonState += 1
+	// 	} else {
+	// 		g.btn1.buttonState = 0
+	// 	}
+	// 	//g.sprt.imgHeight = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.Y
+	// 	//g.sprt.imgWidth = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.X
+	// }
+
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn1.isMouseOverPos() {
+		g.btn1.buttonState = 2
+		// if g.btn1.buttonState < (len(g.btn1.Simg) - 1) {
+
+		// } else {
+
+		// }
+	} else if !ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn1.isMouseOverPos() {
+		g.btn1.buttonState = 1
+	} else {
+		g.btn1.buttonState = 0
+	}
 	return nil
 }
 func (g *Game) FPSChanger() {
@@ -214,6 +275,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(backgroundColor, nil)
 	g.FPSChanger()
 	g.sprt.Draw(screen, g)
+	g.btn1.Draw(screen, g)
 	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3d,%3d\n(vX,Vy):%3d,%3d\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.fRate, g.sprt.pX, g.sprt.pY, g.sprt.vX, g.sprt.vY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
 	ebitenutil.DebugPrint(screen, g.gMSG)
 }
