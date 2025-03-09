@@ -14,11 +14,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-type FrameRateTracking struct {
-	fRate  float64
-	lTime  time.Time
-	frames int
-}
+// type FrameRateTracking struct {
+// 	fRate  float64
+// 	lTime  time.Time
+// 	frames int
+// }
 
 // type IntVector2D struct {
 // 	x int
@@ -44,10 +44,10 @@ var img *ebiten.Image
 
 var imgs []ebiten.Image
 
-var whiteImage = ebiten.NewImage(defScrnResX, defScrnResY)
+var backgroundColor = ebiten.NewImage(defScrnResX, defScrnResY)
 
 func init() {
-	whiteImage.Fill(color.RGBA{200, 200, 200, 255})
+	backgroundColor.Fill(color.RGBA{200, 200, 200, 255})
 	var err error
 	img, _, err = ebitenutil.NewImageFromFile("assets/Square_32x32Texture.png")
 	if err != nil {
@@ -211,7 +211,7 @@ func (g *Game) FPSChanger() {
 
 }
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.DrawImage(whiteImage, nil)
+	screen.DrawImage(backgroundColor, nil)
 	g.FPSChanger()
 	g.sprt.Draw(screen, g)
 	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3d,%3d\n(vX,Vy):%3d,%3d\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.fRate, g.sprt.pX, g.sprt.pY, g.sprt.vX, g.sprt.vY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
