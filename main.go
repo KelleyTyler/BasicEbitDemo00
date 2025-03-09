@@ -257,6 +257,13 @@ func (g *Game) Update() error {
 	} else {
 		g.btn1.buttonState = 0
 	}
+
+	if g.btn1.buttonState == 2 {
+		backgroundColor.Fill(color.RGBA{150, 150, 200, 255})
+	} else {
+		backgroundColor.Fill(color.RGBA{200, 200, 200, 255})
+	}
+
 	return nil
 }
 func (g *Game) FPSChanger() {
@@ -276,7 +283,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.FPSChanger()
 	g.sprt.Draw(screen, g)
 	g.btn1.Draw(screen, g)
-	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3d,%3d\n(vX,Vy):%3d,%3d\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.fRate, g.sprt.pX, g.sprt.pY, g.sprt.vX, g.sprt.vY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
+	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3d,%3d\n", g.fRate, g.sprt.pX, g.sprt.pY)
+	g.gMSG += fmt.Sprintf("(vX,Vy):%3d,%3d\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.sprt.vX, g.sprt.vY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
 	ebitenutil.DebugPrint(screen, g.gMSG)
 }
 
