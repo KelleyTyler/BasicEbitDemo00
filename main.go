@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
@@ -12,6 +13,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/image/font/gofont/gomono"
 )
 
 // type FrameRateTracking struct {
@@ -38,13 +41,17 @@ const (
 	defScrnResY         = 240 //240
 	defWindowWidth      = 640
 	defWindowHeight     = 480
+	fontSize0           = 10
 )
 
 var img *ebiten.Image
 
 var imgs []ebiten.Image
 var btnImgs []ebiten.Image
+var btnImgs1 []ebiten.Image
 var backgroundColor = ebiten.NewImage(defScrnResX, defScrnResY)
+var faceSrc *text.GoTextFaceSource
+var textface text.Face
 
 func init() {
 	backgroundColor.Fill(color.RGBA{200, 200, 200, 255})
@@ -59,17 +66,45 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	imgs = GetArrayOfImages(temp, 32, 0, 32, 0, 16)
+	imgs = GetArrayOfImages(temp, 0, 0, 32, 0, 32, 0, 8)
 	temp, _, err = ebitenutil.NewImageFromFile("assets/96x32Buttons.png")
 	if err != nil {
 		log.Fatal(err)
 	}
-	btnImgs = GetArrayOfImages(temp, 32, 0, 16, 0, 3)
+	btnImgs = GetArrayOfImages(temp, 0, 0, 32, 0, 16, 0, 3)
+	btnImgs1 = GetArrayOfImages(temp, 0, 1, 32, 0, 16, 0, 3)
+	faceSrc, err = text.NewGoTextFaceSource(bytes.NewReader(gomono.TTF))
+	if err != nil {
+		log.Fatal("err: ", err)
+	}
+	textface = &text.GoTextFace{
+		Source: faceSrc,
+		Size:   fontSize0,
+	}
+
 }
 
-func GetArrayOfImages(source *ebiten.Image, subImageX int, xBuf int, subImageY int, yBuf int, numImages int) []ebiten.Image {
+/*
+quite proud of this function; was an improvement on the help I'd seen online;
+this is a function that can do a lot;
+ISSUES/TODO: error checking before I move it to a more modular location;
+*/
+func GetArrayOfImages(source *ebiten.Image, skipTilesX int, skipTilesY int, subImageX int, xBuf int, subImageY int, yBuf int, numImages int) []ebiten.Image {
 	var temp []ebiten.Image
+	//the number we skip to;
 	a, b := 0, 0
+
+	if (subImageX * skipTilesX) > (source.Bounds().Max.X) {
+		//find out by how much..
+		e := source.Bounds().Max.X / subImageX
+		f := skipTilesX - e
+		//fmt.Printf("OVERFLOW %d %d\n", e, f)
+		b++
+		a = f
+	} else {
+		a = skipTilesX
+	}
+	b = skipTilesY
 	for i := 0; i < numImages; i++ {
 		if (a * subImageX) >= source.Bounds().Max.X {
 			b++
@@ -92,14 +127,17 @@ type Button struct {
 	buttonState     int
 	bX, bY          int
 	bHeight, bWidth int
+	label           string
 }
 
 type Sprite struct {
 	Simg      []ebiten.Image //sprite image; to be replaced by an array
 	pX, pY    int            //this is the position in x and y;
-	vX, vY    int            //this is the velocity in x and y;
-	imgHeight int            //
-	imgWidth  int            //
+	fpX, fpY  float64
+	vfX, vfY  float64
+	vX, vY    int //this is the velocity in x and y;
+	imgHeight int //
+	imgWidth  int //
 
 	angle         int //the angle of the image
 	imgArrCurrent int
@@ -117,24 +155,34 @@ func (btn *Button) isMouseOverPos() bool {
 *this will need a
  */
 func (sprt *Sprite) Update() {
-	sprt.pX += sprt.vX
-	sprt.pY += sprt.vY
-	if sprt.pX < 0 {
+	//sprt.pX += sprt.vX
+	//sprt.pY += sprt.vY
+	sprt.fpX += sprt.vfX
+	sprt.fpY += sprt.vfY
+	if sprt.fpX < float64(0) {
 		// sprt.pX = -sprt.pX
-		sprt.pX = 0
-		sprt.vX = 0
-	} else if mx := defScrnResX - sprt.imgWidth; mx <= sprt.pX {
-		sprt.pX = 2*mx - sprt.pX
-		sprt.vX = 0
+		//sprt.pX = 0
+		//sprt.vX = 0
+		sprt.fpX = 0.0
+		sprt.vfX = 0
+	} else if mx := defScrnResX - sprt.imgWidth; float64(mx) <= sprt.fpX {
+		//sprt.pX = 2*mx - sprt.pX
+		//sprt.vX = 0
+		sprt.vfX = 0.0
+		sprt.fpX = 2*float64(mx) - sprt.fpX
 	}
-	if sprt.pY < 0 {
+	if sprt.fpY < float64(0) {
 		// sprt.pY = -sprt.pY
-		sprt.pY = 0
+		//sprt.pY = 0
 
-		sprt.vY = 0
-	} else if my := defScrnResY - sprt.imgHeight; my <= sprt.pY {
-		sprt.pY = 2*my - sprt.pY
-		sprt.vY = 0
+		//sprt.vY = 0
+		sprt.fpY = 0.0
+		sprt.vfY = 0
+	} else if my := defScrnResY - sprt.imgHeight; float64(my) <= sprt.fpY {
+		//sprt.pY = 2*my - sprt.pY
+		//sprt.vY = 0
+		sprt.vfY = 0
+		sprt.fpY = 2*float64(my) - sprt.fpY
 	}
 	//sprt.angle++
 	if sprt.angle == maxAngle {
@@ -150,19 +198,35 @@ func (sprt *Sprite) Draw(screen *ebiten.Image, g *Game) {
 	g.op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
 	g.op.GeoM.Rotate(2 * math.Pi * float64(sprt.angle) / float64(maxAngle))
 	g.op.GeoM.Translate(float64(w)/2, float64(h)/2)
-	g.op.GeoM.Translate(float64(sprt.pX), float64(sprt.pY))
+	g.op.GeoM.Translate(float64(sprt.fpX), float64(sprt.fpY))
+	//g.op.GeoM.Translate(float64(sprt.pX), float64(sprt.pY))
 	screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
 	g.op.GeoM.Reset()
 }
 
 func (btn *Button) Draw(screen *ebiten.Image, g *Game) {
-	w, h := btn.Simg[btn.buttonState].Bounds().Dx(), btn.Simg[btn.buttonState].Bounds().Dy()
+	//w, h := btn.Simg[btn.buttonState].Bounds().Dx(), btn.Simg[btn.buttonState].Bounds().Dy()
 	g.op.GeoM.Reset()
-	g.op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
-	g.op.GeoM.Translate(float64(w)/2, float64(h)/2)
+	//g.op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
+	//g.op.GeoM.Translate(float64(w)/2, float64(h)/2)
+	g.op.GeoM.Scale(2.0, 2.0)
 	g.op.GeoM.Translate(float64(btn.bX), float64(btn.bY))
 	screen.DrawImage(&btn.Simg[btn.buttonState], &g.op)
 	g.op.GeoM.Reset()
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(float64(btn.bX+(fontSize0/2)), float64(btn.bY+(fontSize0/2)))
+	op.ColorScale.ScaleWithColor(color.RGBA{250, 250, 250, 255})
+	op.LineSpacing = fontSize0
+	text.Draw(screen, btn.label, textface, op)
+}
+func (btn *Button) Update(g *Game) {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && btn.isMouseOverPos() {
+		btn.buttonState = 2
+	} else if !ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && btn.isMouseOverPos() {
+		btn.buttonState = 1
+	} else {
+		btn.buttonState = 0
+	}
 }
 
 type Game struct {
@@ -175,6 +239,7 @@ type Game struct {
 	sprt Sprite
 	op   ebiten.DrawImageOptions
 	gMSG string
+	btn0 Button
 	btn1 Button
 }
 
@@ -187,8 +252,12 @@ func (g *Game) init() error {
 		Simg:          imgs,
 		pX:            64,
 		pY:            64,
+		fpX:           64.0,
+		fpY:           64.0,
 		vX:            0,
 		vY:            0,
+		vfY:           0.0,
+		vfX:           0.0,
 		imgHeight:     32,
 		imgWidth:      32,
 		angle:         0,
@@ -196,13 +265,23 @@ func (g *Game) init() error {
 		//imgArrDown:    false,
 	}
 	//g.sprt.Simg = append(g.sprt.Simg, *img)
-	g.btn1 = Button{
+	g.btn0 = Button{
 		Simg:        btnImgs,
-		bX:          defScrnResX - 36,
-		bY:          16,
-		bHeight:     16,
-		bWidth:      32,
+		bX:          defScrnResX - 64,
+		bY:          32,
+		bHeight:     32,
+		bWidth:      64,
 		buttonState: 0,
+		label:       "Btn 0",
+	}
+	g.btn1 = Button{
+		Simg:        btnImgs1,
+		bX:          defScrnResX - 64,
+		bY:          64,
+		bHeight:     32,
+		bWidth:      64,
+		buttonState: 0,
+		label:       "Btn 1",
 	}
 	return nil
 }
@@ -215,16 +294,20 @@ func (g *Game) Update() error {
 	//this might be the basic CPU-type logic only though... not sure;
 	g.sprt.Update()
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		g.sprt.vX += 1
+		//g.sprt.vX += 1
+		g.sprt.vfX += 0.5
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		g.sprt.vX -= 1
+		//g.sprt.vX -= 1
+		g.sprt.vfX -= 0.5
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		g.sprt.vY += 1
+		//g.sprt.vY += 1
+		g.sprt.vfY += 0.5
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		g.sprt.vY -= 1
+		//g.sprt.vY -= 1
+		g.sprt.vfY -= 0.5
 	}
 	if inpututil.IsKeyJustReleased(ebiten.KeyA) {
 		if g.sprt.imgArrCurrent < (len(g.sprt.Simg) - 1) {
@@ -236,30 +319,33 @@ func (g *Game) Update() error {
 		g.sprt.imgWidth = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.X
 	}
 	// if inpututil.IsKeyJustReleased(ebiten.KeyD) {
-	// 	if g.btn1.buttonState < (len(g.btn1.Simg) - 1) {
-	// 		g.btn1.buttonState += 1
+	// 	if g.btn0.buttonState < (len(g.btn0.Simg) - 1) {
+	// 		g.btn0.buttonState += 1
 	// 	} else {
-	// 		g.btn1.buttonState = 0
+	// 		g.btn0.buttonState = 0
 	// 	}
 	// 	//g.sprt.imgHeight = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.Y
 	// 	//g.sprt.imgWidth = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.X
 	// }
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn1.isMouseOverPos() {
-		g.btn1.buttonState = 2
-		// if g.btn1.buttonState < (len(g.btn1.Simg) - 1) {
+	// if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn0.isMouseOverPos() {
+	// 	g.btn0.buttonState = 2
+	// 	// if g.btn0.buttonState < (len(g.btn0.Simg) - 1) {
 
-		// } else {
+	// 	// } else {
 
-		// }
-	} else if !ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn1.isMouseOverPos() {
-		g.btn1.buttonState = 1
-	} else {
-		g.btn1.buttonState = 0
-	}
-
-	if g.btn1.buttonState == 2 {
+	// 	// }
+	// } else if !ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn0.isMouseOverPos() {
+	// 	g.btn0.buttonState = 1
+	// } else {
+	// 	g.btn0.buttonState = 0
+	// }
+	g.btn0.Update(g)
+	g.btn1.Update(g)
+	if g.btn0.buttonState == 2 {
 		backgroundColor.Fill(color.RGBA{150, 150, 200, 255})
+	} else if g.btn1.buttonState == 2 {
+		backgroundColor.Fill(color.RGBA{200, 150, 150, 255})
 	} else {
 		backgroundColor.Fill(color.RGBA{200, 200, 200, 255})
 	}
@@ -282,9 +368,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(backgroundColor, nil)
 	g.FPSChanger()
 	g.sprt.Draw(screen, g)
+	g.btn0.Draw(screen, g)
 	g.btn1.Draw(screen, g)
-	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3d,%3d\n", g.fRate, g.sprt.pX, g.sprt.pY)
-	g.gMSG += fmt.Sprintf("(vX,Vy):%3d,%3d\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.sprt.vX, g.sprt.vY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
+	g.gMSG = fmt.Sprintf("FPS:%3.1f\nSPRITE:\n(pX,pY):%3f,%3f\n", g.fRate, g.sprt.fpX, g.sprt.fpY)
+	g.gMSG += fmt.Sprintf("(vfX,vfY):%3f,%3f\nImg(W,H):%3d,%3d\nAngle:%3d\nIMG:%3d", g.sprt.vfX, g.sprt.vfY, g.sprt.imgWidth, g.sprt.imgHeight, g.sprt.angle, g.sprt.imgArrCurrent)
 	ebitenutil.DebugPrint(screen, g.gMSG)
 }
 
