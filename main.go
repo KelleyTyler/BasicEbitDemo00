@@ -16,23 +16,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/gofont/gomono"
+	"golang.org/x/image/font/gofont/goregular"
 )
-
-// type FrameRateTracking struct {
-// 	fRate  float64
-// 	lTime  time.Time
-// 	frames int
-// }
-
-// type IntVector2D struct {
-// 	x int
-// 	y int
-// }
-
-// func (vec0 *IntVector2D) VectorAdditionI(vec1 IntVector2D) {
-// 	vec0.x = vec0.x + vec1.x
-// 	vec0.y = vec0.x + vec1.y
-// }
 
 const (
 	spriteX         int     = 64
@@ -52,8 +37,10 @@ var (
 	btnImgs         []ebiten.Image
 	btnImgs1        []ebiten.Image
 	backgroundColor = ebiten.NewImage(defScrnResX, defScrnResY)
+	foreground      = ebiten.NewImage(defScrnResX, defScrnResY)
 	faceSrc         *text.GoTextFaceSource
-	textface        text.Face
+	textFaceMono    text.Face
+	textFaceReg20   text.Face
 	defSpriteImg    = ebiten.NewImage(8, 8)
 	wSubImage       = ebiten.NewImage(5, 5)
 )
@@ -75,29 +62,16 @@ type AnimatedSprite struct {
 }
 
 func (ani *AnimatedSprite) GetCurrFrame() *ebiten.Image {
-
-	if int64(time.Since(ani.lastTime)) > int64(ani.timing[ani.state]) {
-
-		if ani.active {
-			ani.lastTime = time.Now()
-			if ani.state < ani.stateLimit {
-				ani.state++
-			} else {
-				ani.state = 0
-			}
-		}
-
-	}
 	return &ani.imgs[ani.state]
 }
 func (ani *AnimatedSprite) init(title string, imgsIn []ebiten.Image, start int, end int, timingNums []int) *AnimatedSprite {
 	temp := AnimatedSprite{
-		name:     title,
-		imgs:     nil,
-		state:    0,
-		timing:   timingNums,
-		active:   false,
-		lastTime: time.Now(),
+		name:   title,
+		imgs:   nil,
+		state:  0,
+		timing: timingNums,
+		active: false,
+		//lastTime: nil,
 	}
 	temp.imgs = GetArrayOfImagesFromArray(imgsIn, start, end)
 	return &temp
@@ -110,6 +84,18 @@ func (ani *AnimatedSprite) GetCurrFrameSize() (int, int) {
 	a = ani.imgs[ani.state].Bounds().Dx()
 	b = ani.imgs[ani.state].Bounds().Dy()
 	return a, b
+}
+
+func (ani *AnimatedSprite) Update() {
+	tems := time.Since(ani.lastTime)
+	if int64(tems.Milliseconds()) > int64(ani.timing[ani.state]) {
+		ani.lastTime = time.Now()
+		if ani.state < ani.stateLimit {
+			ani.state++
+		} else {
+			ani.state = 0
+		}
+	}
 }
 
 type VectorThing struct {
@@ -151,16 +137,6 @@ func (sprt *Sprite) drawOutline(screen *ebiten.Image) {
 	point2x, point2y := float32(sprt.fpX-adval), float32(sprt.fpY-adval)
 	point3x, point3y := float32(sprt.fpX-adval), float32(sprt.fpY+adval)
 	//rotation;
-
-	// point0x += float32(sprt.fpX)
-	// point0y += float32(sprt.fpY)
-	// point1x += float32(sprt.fpX)
-	// point1y += float32(sprt.fpY)
-	// point2x += float32(sprt.fpX)
-	// point2y += float32(sprt.fpY)
-	// point3x += float32(sprt.fpX)
-	// point3y += float32(sprt.fpY)
-
 	point0x, point0y = rotate(float64(point0x), float64(point0y), sprt.fpX, sprt.fpY, sprt.angle)
 	point1x, point1y = rotate(float64(point1x), float64(point1y), sprt.fpX, sprt.fpY, sprt.angle)
 	point2x, point2y = rotate(float64(point2x), float64(point2y), sprt.fpX, sprt.fpY, sprt.angle)
@@ -202,6 +178,7 @@ func (sprt *Sprite) drawOutline(screen *ebiten.Image) {
 }
 
 func rotate(px float64, py float64, ox float64, oy float64, angle float64) (float32, float32) {
+	// (float64, float64)
 	//normalize angle
 	angl := angle
 	if angl < 0 {
@@ -222,6 +199,7 @@ func rotate(px float64, py float64, ox float64, oy float64, angle float64) (floa
 	qx = ox + qx
 	qy = oy + qy
 	return float32(qx), float32(qy)
+	// return qx, qy
 }
 
 // failed experimental attempt to import;
@@ -263,8 +241,10 @@ func (vex *VectorThing) drawLine(screen *ebiten.Image, region image.Rectangle, c
 }
 
 func init() {
-	backgroundColor.Fill(color.RGBA{200, 200, 200, 255})
+	backgroundColor.Fill(color.RGBA{150, 150, 150, 255})
+	foreground.Fill(color.RGBA{255, 255, 255, 0})
 	// defSpriteImg.Fill(color.RGBA{200, 15, 15, 255})
+	//tempReader = bytes.NewReader()
 	wSubImage.Fill(color.White)
 	var err error
 	img, _, err = ebitenutil.NewImageFromFile("assets/Square_32x32Texture.png")
@@ -277,22 +257,30 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	imgs = GetArrayOfImages(temp, 0, 0, 32, 0, 32, 0, 8)
+	imgs = GetArrayOfImages(temp, 0, 0, 32, 0, 32, 0, 14)
 	temp, _, err = ebitenutil.NewImageFromFile("assets/96x32Buttons.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 	btnImgs = GetArrayOfImages(temp, 0, 0, 32, 0, 16, 0, 3)
 	btnImgs1 = GetArrayOfImages(temp, 0, 1, 32, 0, 16, 0, 3)
+
 	faceSrc, err = text.NewGoTextFaceSource(bytes.NewReader(gomono.TTF))
 	if err != nil {
 		log.Fatal("err: ", err)
 	}
-	textface = &text.GoTextFace{
+	textFaceMono = &text.GoTextFace{
 		Source: faceSrc,
 		Size:   fontSize0,
 	}
-
+	faceSrc, err = text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
+	if err != nil {
+		log.Fatal("err: ", err)
+	}
+	textFaceReg20 = &text.GoTextFace{
+		Source: faceSrc,
+		Size:   20,
+	}
 }
 
 /*
@@ -354,10 +342,14 @@ sprites are...
 
 TODO:thoughts; there needs to be a way to control these things without neededing to necessarily control them manually; there might be some kind of solution to this problem;
 but I'm unsure of how to go about it entirely;
+Perhaps abstracting it to a layer of interfaces might do the trick;
+
+either way I'm interested in working on the animation arc right now;
 */
 type Sprite struct {
 	Simg          []ebiten.Image //sprite image; to be replaced by an array
 	backupImg     ebiten.Image
+	animars       AnimatedSprite
 	fpX, fpY      float64 //this is the position in x and y;
 	vfX, vfY      float64
 	imgHeight     int //
@@ -384,37 +376,51 @@ func (btn *Button) isMouseOverPos() bool {
 *this will need a
  */
 func (sprt *Sprite) Move(dir int) {
+	var deltaX, deltaY float32 = 0.0, 0.0
 	switch dir {
 	case 0: //up/north
+		deltaX, deltaY = rotate(0, -sprt.acceleration, 0, 0, sprt.angle)
 
-		break
+		//break
 	case 1: //right/east
+		deltaX, deltaY = rotate(sprt.acceleration, 0, 0, 0, sprt.angle)
 
-		break
+		//break
 	case 2: //down/south
+		deltaX, deltaY = rotate(0, sprt.acceleration, 0, 0, sprt.angle)
 
-		break
+		//break
 	case 3: //left/west
-		break
-	default: //sloowing down might make this error checking
+		deltaX, deltaY = rotate(-sprt.acceleration, 0, 0, 0, sprt.angle)
 
+		//break
+	default: //sloowing down might make this error checking
+		// deltaX, deltaY = rotate(0, 0, 0, 0, sprt.angle)
 	}
+	if math.Abs(sprt.vfX) < sprt.maxSpeed {
+		sprt.vfX += float64(deltaX)
+	}
+	if math.Abs(sprt.vfY) < sprt.maxSpeed {
+		sprt.vfY += float64(deltaY)
+	}
+
 }
 func (sprt *Sprite) Update() {
 	//sprt.pX += sprt.vX
 	//sprt.pY += sprt.vY
 	//sprt.fpX += sprt.vfX
-	if (sprt.vfX > 0.01) || (sprt.vfX < -0.01) {
+	if math.Abs(sprt.vfX) >= 0.01 {
 		sprt.fpX += sprt.vfX
 	} else {
 		sprt.vfX = 0.0
 	}
-	if (sprt.vfY > 0.01) || (sprt.vfY < -0.01) {
+	if math.Abs(sprt.vfY) >= 0.01 {
 		sprt.fpY += sprt.vfY
 	} else {
 		sprt.vfY = 0.0
 	}
-	sprt.MovementDrag(0.2, 0.3)
+	sprt.MovementDrag(0.100000, 0.20000000)
+	sprt.MovementDrag(0.02, 0.010) //for some reason this works really well with the speed set at
 	var offsetX float64 = 0
 	var offsetY float64 = 0
 	if sprt.IsCentered {
@@ -427,10 +433,12 @@ func (sprt *Sprite) Update() {
 		//sprt.vX = 0
 		sprt.fpX = 0.0 + offsetX
 		sprt.vfX = 0
+		sprt.vfY = 0
 	} else if mx := defScrnResX - sprt.imgWidth + int(offsetX); float64(mx) <= sprt.fpX {
 		//sprt.pX = 2*mx - sprt.pX
 		//sprt.vX = 0
 		sprt.vfX = 0.0
+		sprt.vfY = 0
 		if sprt.IsCentered {
 			sprt.fpX = 2*float64(mx) - sprt.fpX
 		} else {
@@ -445,10 +453,12 @@ func (sprt *Sprite) Update() {
 		//sprt.vY = 0
 		sprt.fpY = 0.0 + offsetY
 		sprt.vfY = 0
+		sprt.vfX = 0
 	} else if my := defScrnResY - sprt.imgHeight + int(offsetY); float64(my) <= sprt.fpY {
 		//sprt.pY = 2*my - sprt.pY
 		//sprt.vY = 0
 		sprt.vfY = 0
+		sprt.vfX = 0
 		if sprt.IsCentered {
 			sprt.fpY = 2*float64(my) - sprt.fpY
 		} else {
@@ -459,8 +469,12 @@ func (sprt *Sprite) Update() {
 	if sprt.angle > maxAngle || sprt.angle < -(maxAngle) {
 		sprt.angle = 0.0
 	}
+	sprt.animars.Update()
 	sprt.msg = fmt.Sprintf("SPRITE:\n (pX,pY):%-06.2f,%-06.2f\n (vX,vY):%-06.2f,%-06.2f\n Angle: %-06.2f RotEn: %t\n", sprt.fpX, sprt.fpY, sprt.vfX, sprt.vfY, sprt.angle, sprt.RotEnabled)
-	sprt.msg += fmt.Sprintf(" im(h,w) %3d,%3d\n", sprt.imgHeight, sprt.imgWidth)
+	sprt.msg += fmt.Sprintf(" im(h,w) %3d,%3d STATE:%d %t %d\n ", sprt.imgHeight, sprt.imgWidth, sprt.animars.state, sprt.animars.active, time.Since(sprt.animars.lastTime).Milliseconds())
+	sprt.MovementDrag(0.25, 0.5)
+	// sprt.vfX = 0.0
+	// sprt.vfY = 0.0
 }
 
 func (sprt *Sprite) MovementDrag(rateOfDecay float32, cuttoff float64) {
@@ -469,14 +483,14 @@ func (sprt *Sprite) MovementDrag(rateOfDecay float32, cuttoff float64) {
 	} else if sprt.vfX > cuttoff {
 		sprt.vfX -= float64(rateOfDecay)
 	} else {
-		sprt.vfX = 0.0
+		//sprt.vfX = 0.0
 	}
 	if sprt.vfY < -cuttoff {
 		sprt.vfY += float64(rateOfDecay)
 	} else if sprt.vfY > cuttoff {
 		sprt.vfY -= float64(rateOfDecay)
 	} else {
-		sprt.vfY = 0.0
+		//sprt.vfY = 0.0
 	}
 }
 func (sprt *Sprite) Draw(screen *ebiten.Image, g *Game) {
@@ -493,7 +507,7 @@ func (sprt *Sprite) Draw(screen *ebiten.Image, g *Game) {
 	g.op.GeoM.Translate(float64(w)/2, float64(h)/2)
 	g.op.GeoM.Translate(float64(sprt.fpX)+offsetX, float64(sprt.fpY)+offsetY)
 	//g.op.GeoM.Translate(float64(sprt.pX), float64(sprt.pY))
-	screen.DrawImage(&sprt.backupImg, &g.op)
+	//screen.DrawImage(&sprt.backupImg, &g.op)
 	if sprt.showSimg {
 		screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
 	}
@@ -511,9 +525,12 @@ func (sprt *Sprite) DrawImageCentered(screen *ebiten.Image, g *Game, adjustX int
 	}
 	g.op.GeoM.Translate(float64(sprt.fpX)+float64(adjustX), float64(sprt.fpY)+float64(adjustY))
 	if sprt.showSimg {
-		screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
+		screen.DrawImage(sprt.animars.GetCurrFrame(), &g.op)
+		//screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
 	}
 	//screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
+
+	//vector.DrawFilledRect(screen, float32(sprt.fpX-16), float32(sprt.fpY-16), 32, 32, color.RGBA{0, 0, 200, 255}, false)
 	vector.DrawFilledCircle(screen, float32(sprt.fpX), float32(sprt.fpY), 5, color.RGBA{250, 100, 100, 255}, true)
 	g.op.GeoM.Reset()
 }
@@ -532,7 +549,7 @@ func (btn *Button) Draw(screen *ebiten.Image, g *Game) {
 	op.GeoM.Translate(float64(btn.bX+(fontSize0/2)), float64(btn.bY+(fontSize0/2)))
 	op.ColorScale.ScaleWithColor(color.RGBA{250, 250, 250, 255})
 	op.LineSpacing = fontSize0
-	text.Draw(screen, btn.label, textface, op)
+	text.Draw(screen, btn.label, textFaceMono, op)
 }
 func (btn *Button) Update(g *Game) {
 	//ebiten.IsMouseButtonPressed(ebiten.MouseButton0)
@@ -547,9 +564,9 @@ func (btn *Button) Update(g *Game) {
 
 type Game struct {
 	//game variables and other such things go here;
-	fRate  float64
-	lTime  time.Time
-	frames int
+	// fRate  float64
+	// lTime  time.Time
+	// frames int
 	inited bool
 	//enough of this
 	sprt   Sprite
@@ -558,6 +575,7 @@ type Game struct {
 	btn0   Button
 	btn1   Button
 	vectra VectorThing
+	//TimerSys *ebiten.
 }
 
 func (g *Game) init() error {
@@ -568,6 +586,7 @@ func (g *Game) init() error {
 	g.sprt = Sprite{
 		Simg:          imgs,
 		backupImg:     *defSpriteImg,
+		animars:       *g.sprt.animars.init("idle", imgs, 4, 12, []int{500, 500, 700, 500, 300, 500, 200, 500}),
 		fpX:           64.0,
 		fpY:           64.0,
 		vfY:           0.0,
@@ -578,8 +597,8 @@ func (g *Game) init() error {
 		imgArrCurrent: 0,
 		showSimg:      true,
 		IsCentered:    true,
-		acceleration:  0.3,
-		maxSpeed:      5.0,
+		acceleration:  0.12,
+		maxSpeed:      4.0,
 		msg:           "",
 		RotEnabled:    true,
 		//imgArrDown:    false,
@@ -614,6 +633,10 @@ func (g *Game) init() error {
 	g.vectra.vertices = append(g.vectra.vertices, ebiten.Vertex{SrcX: 0.0, SrcY: 0.0, DstX: 50.0, DstY: -50.0})
 	g.vectra.vertices = append(g.vectra.vertices, ebiten.Vertex{SrcX: 0.0, SrcY: 0.0, DstX: -50.0, DstY: -50.0})
 	g.vectra.drawn = false
+
+	g.sprt.animars.active = true
+	g.sprt.animars.stateLimit = 6
+	//g.sprt.animars.lastTime = time.Now()
 	return nil
 }
 func (g *Game) Update() error {
@@ -627,29 +650,33 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
 		//g.sprt.vX += 1
 		//g.sprt.vfX += 0.5
-		if g.sprt.vfX < (g.sprt.maxSpeed) {
-			g.sprt.vfX += 0.5
-		}
+		// if g.sprt.vfX < (g.sprt.maxSpeed) {
+		// 	g.sprt.vfX += 0.5
+		// }
+		g.sprt.Move(1)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		//g.sprt.vX -= 1
 		//g.sprt.vfX -= 0.5
-		if g.sprt.vfX > -(g.sprt.maxSpeed) {
-			g.sprt.vfX -= 0.5
-		}
+		// if g.sprt.vfX > -(g.sprt.maxSpeed) {
+		// 	g.sprt.vfX -= 0.5
+		// }
+		g.sprt.Move(3)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
 		//g.sprt.vY += 1
 		//g.sprt.vfY += 0.5
-		if g.sprt.vfY > -(g.sprt.maxSpeed) {
-			g.sprt.vfY -= 0.5
-		}
+		// if g.sprt.vfY > -(g.sprt.maxSpeed) {
+		// 	g.sprt.vfY -= 0.5
+		// }
+		g.sprt.Move(0)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
 		//g.sprt.vY -= 1
-		if g.sprt.vfY < (g.sprt.maxSpeed) {
-			g.sprt.vfY += 0.5
-		}
+		// if g.sprt.vfY < (g.sprt.maxSpeed) {
+		// 	g.sprt.vfY += 0.5
+		// }
+		g.sprt.Move(2)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyE) {
 		if g.sprt.RotEnabled {
@@ -676,8 +703,7 @@ func (g *Game) Update() error {
 		} else {
 			g.sprt.showSimg = true
 		}
-		//g.sprt.imgHeight = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.Y
-		//g.sprt.imgWidth = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.X
+
 	}
 	if inpututil.IsKeyJustReleased(ebiten.KeyC) {
 		if g.sprt.IsCentered {
@@ -685,27 +711,9 @@ func (g *Game) Update() error {
 		} else {
 			g.sprt.IsCentered = true
 		}
-		//g.sprt.imgHeight = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.Y
-		//g.sprt.imgWidth = g.sprt.Simg[g.sprt.imgArrCurrent].Bounds().Max.X
+
 	}
-	// if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn0.isMouseOverPos() {
-	// 	g.btn0.buttonState = 2
-	// 	// if g.btn0.buttonState < (len(g.btn0.Simg) - 1) {
 
-	// 	// } else {
-
-	// 	// }
-	// } else if !ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && g.btn0.isMouseOverPos() {
-	// 	g.btn0.buttonState = 1
-	// } else {
-	// 	g.btn0.buttonState = 0
-	// }
-
-	// if g.sprt.angle > -360.00 && g.sprt.angle < 360.00 {
-	// 	g.sprt.angle += 1
-	// } else {
-	// 	g.sprt.angle = 0
-	// }
 	g.btn0.Update(g)
 	g.btn1.Update(g)
 	if g.btn0.buttonState == 2 && inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
@@ -715,28 +723,45 @@ func (g *Game) Update() error {
 	if g.btn1.buttonState == 2 {
 		g.sprt.RotEnabled = !g.sprt.RotEnabled
 	}
-	// else {
 
-	// }
-	backgroundColor.Fill(color.RGBA{200, 200, 200, 255})
 	return nil
 }
-func (g *Game) FPSChanger() {
-	tempTime := time.Since(g.lTime)
-	if tempTime.Milliseconds() > 250 {
-		g.fRate = (float64(g.frames) / tempTime.Seconds())
-		g.frames = 0
-		g.lTime = time.Now()
-	} else {
 
-		g.frames += 1
-	}
+// func (g *Game) FPSChanger() {
+// 	tempTime := time.Since(g.lTime)
+// 	if tempTime.Milliseconds() > 250 {
+// 		g.fRate = (float64(g.frames) / tempTime.Seconds())
+// 		g.frames = 0
+// 		g.lTime = time.Now()
+// 	} else {
 
+// 		g.frames += 1
+// 	}
+
+// }
+
+/*
+Moving all of this to here is a good move IMO;
+Keeps it simple
+*/
+func writeRegText(screen *ebiten.Image, inStrng string, xx int, yy int, textSize int, colored color.RGBA) {
+	op := &text.DrawOptions{}
+	scaler := 2.0
+	// op.GeoM.Translate(float64(xx+(textSize/2)), float64(yy+(textSize/2)))
+	op.GeoM.Translate(float64(xx)*scaler, float64(yy)*scaler)
+
+	op.GeoM.Scale(1/scaler, 1/scaler)
+	// op.GeoM.Scale(2, 2)
+
+	op.ColorScale.ScaleWithColor(colored)
+	//fontSize0
+	op.LineSpacing = float64(20)
+	outStrng := inStrng + fmt.Sprintf(" %d ", textSize)
+
+	text.Draw(screen, outStrng, textFaceReg20, op)
 }
-func (g *Game) Draw(screen *ebiten.Image) {
-	screen.DrawImage(backgroundColor, nil)
-	g.FPSChanger()
-	// g.sprt.Draw(screen, g)
+func (g *Game) PreDraw(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{255, 255, 255, 0})
 	g.gMSG = fmt.Sprintf("FPS:%3.1f %3.1f\n", ebiten.ActualFPS(), ebiten.ActualTPS())
 	g.sprt.drawOutline(screen)
 	g.sprt.DrawImageCentered(screen, g, 0, 0)
@@ -754,8 +779,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.gMSG += g.sprt.msg
 	g.gMSG += fmt.Sprintf("%t %3.2f %3.2f angl %3d\n", g.vectra.drawn, g.vectra.vertices[0].DstX, g.vectra.vertices[0].DstY, g.vectra.angle)
 	ebitenutil.DebugPrint(screen, g.gMSG)
+	writeRegText(screen, "Hello\nThis Is A Fish\nNO NOT REALLY", 40, 135, 10, color.RGBA{0, 0, 0, 255})
+	//writeRegText(screen, "Hello", 40, 145, 10, color.RGBA{0, 0, 0, 255})
+	//writeRegText(screen, "Hello", 40, 155, 10, color.RGBA{0, 0, 0, 255})
 	g.gMSG = ""
 	g.sprt.msg = ""
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.PreDraw(foreground)
+	screen.DrawImage(backgroundColor, nil)
+	screen.DrawImage(foreground, nil)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
