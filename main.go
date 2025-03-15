@@ -126,11 +126,11 @@ func (vex *VectorThing) Draw(screen *ebiten.Image, g *Game) {
 }
 func (sprt *Sprite) drawOutline(screen *ebiten.Image) {
 
-	var path vector.Path
+	// var path vector.Path
 	//var
 	var adval float64 = 17.0
-	var vexes []ebiten.Vertex
-	var indes []uint16
+	// var vexes []ebiten.Vertex
+	// var indes []uint16
 
 	point0x, point0y := float32(sprt.fpX+adval), float32(sprt.fpY+adval)
 	point1x, point1y := float32(sprt.fpX+adval), float32(sprt.fpY-adval)
@@ -148,33 +148,36 @@ func (sprt *Sprite) drawOutline(screen *ebiten.Image) {
 	// vector.DrawFilledCircle(screen, point3x, point3y, 5, color.RGBA{0, 255, 0, 255}, false)
 	sprt.msg += fmt.Sprintf("POINT 0: %5.2f,%5.2f: %5.2f %5.2f\n", point0x, point0y, point0x-float32(sprt.fpX), point0y-float32(sprt.fpY))
 	sprt.msg += fmt.Sprintf("POINT 1: %5.2f,%5.2f: %5.2f %5.2f\n", point1x, point1y, point1x-float32(sprt.fpX), point1y-float32(sprt.fpY))
+	vector.StrokeLine(screen, point0x, point0y, point1x, point1y, 1.5, color.RGBA{255, 0, 0, 255}, true)
+	vector.StrokeLine(screen, point1x, point1y, point2x, point2y, 1.5, color.RGBA{255, 0, 0, 255}, true)
+	vector.StrokeLine(screen, point2x, point2y, point3x, point3y, 1.5, color.RGBA{255, 0, 0, 255}, true)
+	vector.StrokeLine(screen, point3x, point3y, point0x, point0y, 1.5, color.RGBA{255, 0, 0, 255}, true)
+	// path.MoveTo(point0x, point0y)
+	// path.LineTo(point0x, point0y)
+	// path.LineTo(point1x, point1y)
+	// path.LineTo(point2x, point2y)
+	// path.LineTo(point3x, point3y)
+	// path.LineTo(point0x, point0y)
+	// //fmt.Printf("VS VS VS VS %d %4.5f,%4.5f\n", i, vs[i].DstX, vs[i].DstY)
+	// op := &vector.StrokeOptions{}
+	// op.LineCap = vector.LineCapSquare
+	// op.LineJoin = vector.LineJoinMiter
+	// op.MiterLimit = 4
+	// op.Width = float32(1.5)
+	// vs, is := path.AppendVerticesAndIndicesForStroke(vexes[:0], indes[:0], op)
+	// for i := range vs {
+	// 	vs[i].SrcX = 1
+	// 	vs[i].SrcY = 1
+	// 	//vs[i].DstX = vs[i].DstX * 2
+	// 	//vs[i].DstY = vs[i].DstY * 2
+	// 	vs[i].ColorR = 1.00
+	// 	vs[i].ColorG = 0.12
+	// 	vs[i].ColorB = 0.12
+	// 	vs[i].ColorA = 1
 
-	path.MoveTo(point0x, point0y)
-	path.LineTo(point0x, point0y)
-	path.LineTo(point1x, point1y)
-	path.LineTo(point2x, point2y)
-	path.LineTo(point3x, point3y)
-	path.LineTo(point0x, point0y)
-	//fmt.Printf("VS VS VS VS %d %4.5f,%4.5f\n", i, vs[i].DstX, vs[i].DstY)
-	op := &vector.StrokeOptions{}
-	op.LineCap = vector.LineCapSquare
-	op.LineJoin = vector.LineJoinMiter
-	op.MiterLimit = 4
-	op.Width = float32(1.5)
-	vs, is := path.AppendVerticesAndIndicesForStroke(vexes[:0], indes[:0], op)
-	for i := range vs {
-		vs[i].SrcX = 1
-		vs[i].SrcY = 1
-		//vs[i].DstX = vs[i].DstX * 2
-		//vs[i].DstY = vs[i].DstY * 2
-		vs[i].ColorR = 1.00
-		vs[i].ColorG = 0.12
-		vs[i].ColorB = 0.12
-		vs[i].ColorA = 1
+	// }
 
-	}
-
-	screen.DrawTriangles(vs, is, wSubImage, &ebiten.DrawTrianglesOptions{AntiAlias: true})
+	// screen.DrawTriangles(vs, is, wSubImage, &ebiten.DrawTrianglesOptions{AntiAlias: true})
 }
 
 func rotate(px float64, py float64, ox float64, oy float64, angle float64) (float32, float32) {
@@ -371,6 +374,18 @@ func (btn *Button) isMouseOverPos() bool {
 	}
 	return false
 }
+
+/*
+Idea: is that there needs to be a way to test if a sprite is in the boundries of another sprite regardless if there's an angle
+so the first test will look for anything that is within a "big circle" taking the distance from the center of the rectangel to the corners;
+the second test will be more in depth taking into account the specific orientation of the rectangle/collision box;
+though perhaps it would be simpler to simply make the "collision boxes" more of a static thing;
+
+then again then again I'm thinking chipmunk might need to come in handy here; but I'm going to wait until after I've implemented sound
+*/
+// func is_point_inBoxPos() {
+
+// }
 
 /*Sprite.Move:
 *this will need a
