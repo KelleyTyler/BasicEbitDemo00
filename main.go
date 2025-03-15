@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"image"
 	"image/color"
 	_ "image/png"
 	"log"
@@ -13,7 +12,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/gofont/gomono"
 	"golang.org/x/image/font/gofont/goregular"
 )
@@ -42,6 +40,7 @@ var (
 	textFaceReg20   text.Face
 	defSpriteImg    = ebiten.NewImage(8, 8)
 	wSubImage       = ebiten.NewImage(5, 5)
+	// wSubImage = CreateBasicImg(color.White, 5, 5)
 )
 
 //type imArchive [][]ebiten.Image//the point of this is to store a lot of images; perhaps a record
@@ -50,33 +49,6 @@ var (
 // 	imgs []ebiten.Image
 
 // }
-
-type VectorThing struct {
-	vertices       []ebiten.Vertex
-	indices        []uint16
-	aa, showcenter bool
-	drawn          bool
-	angle          int //test angle Im thinking
-}
-
-func (vex *VectorThing) Update() {
-
-}
-func (vex *VectorThing) Draw(screen *ebiten.Image, g *Game) {
-	target := screen
-	joins := []vector.LineJoin{
-		vector.LineJoinMiter,
-		vector.LineJoinMiter,
-		vector.LineJoinBevel,
-		vector.LineJoinRound,
-	}
-	caps := []vector.LineCap{
-		vector.LineCapButt,
-		vector.LineCapRound,
-		vector.LineCapSquare,
-	}
-	vex.drawLine(target, image.Rectangle{image.Point{200, 0}, image.Point{100, 240}}, caps[2], joins[3], 1.0)
-}
 
 func rotate(px float64, py float64, ox float64, oy float64, angle float64) (float32, float32) {
 	// (float64, float64)
@@ -103,48 +75,10 @@ func rotate(px float64, py float64, ox float64, oy float64, angle float64) (floa
 	// return qx, qy
 }
 
-// failed experimental attempt to import;
-func (vex *VectorThing) drawLine(screen *ebiten.Image, region image.Rectangle, cap vector.LineCap, join vector.LineJoin, miterLimit float32) {
-	c0x := float64(region.Min.X + region.Dx()/4)
-	c0y := float64(region.Min.Y + region.Dy()/4)
-	c1x := float64(region.Min.X + region.Dx()/4)
-	c1y := float64(region.Max.Y + region.Dy()/4)
-	c2x := float64(region.Max.X + region.Dx()/4)
-	c2y := float64(region.Max.Y + region.Dy()/4)
-	c3x := float64(region.Max.X + region.Dx()/4)
-	c3y := float64(region.Min.Y + region.Dy()/4)
-
-	var path vector.Path
-	path.MoveTo(float32(c0x), float32(c0y))
-	path.LineTo(float32(c1x), float32(c1y))
-	path.LineTo(float32(c2x), float32(c2y))
-	path.LineTo(float32(c3x), float32(c3y))
-	path.LineTo(float32(c0x), float32(c0y))
-	op := &vector.StrokeOptions{}
-	op.LineCap = cap
-	op.LineJoin = join
-	op.MiterLimit = miterLimit
-	op.Width = float32(5)
-	vs, is := path.AppendVerticesAndIndicesForStroke(vex.vertices[:0], vex.indices[:0], op)
-	for i := range vs {
-		vs[i].SrcX = 1
-		vs[i].SrcY = 1
-		vs[i].ColorR = 1
-		vs[i].ColorG = 0.02
-		vs[i].ColorB = 0.02
-		vs[i].ColorA = 1
-
-	}
-	// vs[0].SrcX = 2
-	// vs[0].SrcY =1
-	screen.DrawTriangles(vs, is, wSubImage, &ebiten.DrawTrianglesOptions{AntiAlias: vex.aa})
-
-}
-
 func init() {
 	backgroundColor.Fill(color.RGBA{150, 150, 150, 255})
 	foreground.Fill(color.RGBA{255, 255, 255, 0})
-	// defSpriteImg.Fill(color.RGBA{200, 15, 15, 255})
+	defSpriteImg.Fill(color.RGBA{200, 15, 15, 255})
 	//tempReader = bytes.NewReader()
 	wSubImage.Fill(color.White)
 	var err error
@@ -201,6 +135,7 @@ type Game struct {
 	btn0   Button
 	btn1   Button
 	vectra VectorThing
+	pnl0   ButtonPanel
 	//TimerSys *ebiten.
 }
 
@@ -230,24 +165,33 @@ func (g *Game) init() error {
 		//imgArrDown:    false,
 	}
 	//g.sprt.Simg = append(g.sprt.Simg, *img)
-	g.btn0 = Button{
-		Simg:        btnImgs,
-		bX:          defScrnResX - 64,
-		bY:          32,
-		bHeight:     32,
-		bWidth:      64,
-		buttonState: 0,
-		label:       "Btn 0",
-	}
-	g.btn1 = Button{
-		Simg:        btnImgs1,
-		bX:          defScrnResX - 64,
-		bY:          64,
-		bHeight:     32,
-		bWidth:      64,
-		buttonState: 0,
-		label:       "Btn 1",
-	}
+	// g.btn0 = Button{
+	// 	Simg:        btnImgs,
+	// 	bX:          defScrnResX - 64,
+	// 	bY:          32,
+	// 	bHeight:     32,
+	// 	bWidth:      64,
+	// 	buttonState: 0,
+	// 	label:       "Btn 0",
+	// }
+
+	g.btn0.init("Btn 0", btnImgs, defScrnResX-64, 32, 64, 32)
+
+	// g.btn0 = *getNewButton("Btn 0", btnImgs, defScrnResX-64, 32, 32, 64)
+
+	// g.btn1 = Button{
+	// 	Simg:        btnImgs1,
+	// 	bX:          defScrnResX - 64,
+	// 	bY:          64,
+	// 	bHeight:     32,
+	// 	bWidth:      64,
+	// 	buttonState: 0,
+	// 	label:       "Btn 1",
+	// }
+	g.btn1.init("Btn 1", btnImgs1, defScrnResX-64, 64, 64, 32)
+	g.btn1.isLocking = true
+
+	g.pnl0.InitDefault("PANEL", 84, 125, defScrnResX-84, 96, color.RGBA{150, 150, 200, 255}, true, true, []string{"Btn01", "Btn02", "Btn03"}, btnImgs)
 	g.vectra = VectorThing{
 		vertices:   nil,
 		indices:    nil,
@@ -340,16 +284,24 @@ func (g *Game) Update() error {
 
 	}
 
-	g.btn0.Update(g)
-	g.btn1.Update(g)
+	g.btn0.Update()
+	g.btn1.Update()
+	g.pnl0.Update()
+	// for _, b := range g.pnl0.buttons {
+	// 	b.Update()
+	// }
 	if g.btn0.buttonState == 2 && inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
 		g.sprt.angle = 0.0
 		//backgroundColor.Fill(color.RGBA{150, 150, 200, 255})
 	}
-	if g.btn1.buttonState == 2 {
-		g.sprt.RotEnabled = !g.sprt.RotEnabled
+	if g.btn1.isLocked {
+		g.sprt.RotEnabled = false
+	} else {
+		g.sprt.RotEnabled = true
 	}
-
+	// if g.pnl0.buttons[0].isLocked && inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) {
+	// 	backgroundColor.Fill(color.RGBA{50, 10, 200, 255})
+	// }
 	return nil
 }
 
@@ -379,9 +331,12 @@ func (g *Game) PreDraw(screen *ebiten.Image) {
 	g.sprt.drawOutline(screen)
 	g.sprt.DrawImageCentered(screen, g, 0, 0)
 
-	g.btn0.Draw(screen, g)
-	g.btn1.Draw(screen, g)
-
+	g.btn0.Draw(screen)
+	g.btn1.Draw(screen)
+	if g.pnl0.Visible {
+		g.pnl0.Draw(screen)
+	}
+	//g.btn0.Draw02(screen)
 	// g.vectra.Draw(screen, g)
 	// if !g.vectra.drawn {
 	// 	g.vectra.drawMyShape(screen)

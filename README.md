@@ -44,3 +44,14 @@ go build -o bin/ main.go
     other ideas: trim some of the fat with unused classes;
 
     other other ideas: additional feed 
+
+
+so march 15th,
+
+    moved to a new branch; got a lot of stuff done;
+    the interesting thing is that there's a weird barrier with accessing the array of buttons in a button panel; such that there might need to be a total reworking of buttons in order to accomodate it;
+
+    this is a valuable learning experience of course; I really really enjoy most of it; 
+
+    the buttons and panels might be solved with an array of pointers pointing at the values stored in the array;
+    

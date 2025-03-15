@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -49,5 +50,11 @@ func GetArrayOfImagesFromArray(imgs []ebiten.Image, start int, end int) []ebiten
 		temp = append(temp, imgs[i])
 	}
 
+	return temp
+}
+
+func CreateBasicImg(clor color.Color, w int, h int) *ebiten.Image {
+	var temp *ebiten.Image = ebiten.NewImage(w, h)
+	temp.Fill(clor)
 	return temp
 }

@@ -182,7 +182,7 @@ func (sprt *Sprite) Draw(screen *ebiten.Image, g *Game) {
 	g.op.GeoM.Translate(float64(w)/2, float64(h)/2)
 	g.op.GeoM.Translate(float64(sprt.fpX)+offsetX, float64(sprt.fpY)+offsetY)
 	//g.op.GeoM.Translate(float64(sprt.pX), float64(sprt.pY))
-	//screen.DrawImage(&sprt.backupImg, &g.op)
+	screen.DrawImage(&sprt.backupImg, &g.op)
 	if sprt.showSimg {
 		screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
 	}
@@ -204,7 +204,7 @@ func (sprt *Sprite) DrawImageCentered(screen *ebiten.Image, g *Game, adjustX int
 		//screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
 	}
 	//screen.DrawImage(&sprt.Simg[sprt.imgArrCurrent], &g.op)
-
+	screen.DrawImage(&sprt.backupImg, &g.op)
 	//vector.DrawFilledRect(screen, float32(sprt.fpX-16), float32(sprt.fpY-16), 32, 32, color.RGBA{0, 0, 200, 255}, false)
 	vector.DrawFilledCircle(screen, float32(sprt.fpX), float32(sprt.fpY), 5, color.RGBA{250, 100, 100, 255}, true)
 	g.op.GeoM.Reset()
